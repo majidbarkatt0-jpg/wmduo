@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"
+        xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">
+  <url>
+    <loc>https://wmduo.com/</loc>
+    <lastmod>2026-07-16</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+    <image:image>
+      <image:loc>https://cdn.shopify.com/s/files/1/0740/3867/3559/files/s-l1600.jpg?v=1784121518</image:loc>
+      <image:title>WM Duo CastleView Mini 210° Smart Projector</image:title>
+      <image:caption>The #1 TikTok viral fake window projector — 210° rotation, 4K support</image:caption>
+    </image:image>
+  </url>
+</urlset>
