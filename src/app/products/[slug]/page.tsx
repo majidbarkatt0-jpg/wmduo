@@ -82,6 +82,9 @@ export default function ProductDetailPage() {
   const specs: Record<string, string> = product.specs ? JSON.parse(product.specs) : {}
   const discount = product.compareAt ? Math.round((1 - product.price / product.compareAt) * 100) : 0
 
+  const [buying, setBuying] = useState(false)
+  const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null)
+
   const handleAddToCart = () => {
     addItem({
       productId: product.id,
@@ -93,6 +96,37 @@ export default function ProductDetailPage() {
     }, quantity)
     setAddedToCart(true)
     setTimeout(() => setAddedToCart(false), 3000)
+  }
+
+  const handleBuyNow = async () => {
+    setBuying(true)
+    try {
+      // First add to local cart
+      handleAddToCart()
+      
+      // Create Shopify checkout
+      const res = await fetch('/api/shopify/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          variantId: "gid://shopify/ProductVariant/48020601274519",
+          quantity: quantity,
+        }),
+      })
+      const data = await res.json()
+      
+      if (data.success && data.checkoutUrl) {
+        setCheckoutUrl(data.checkoutUrl)
+        // Redirect to Shopify checkout page
+        window.location.href = data.checkoutUrl
+      } else {
+        alert('Checkout failed: ' + (data.error || 'Unknown error'))
+      }
+    } catch (err) {
+      alert('Failed to create checkout. Please try again.')
+    } finally {
+      setBuying(false)
+    }
   }
 
   return (
@@ -209,22 +243,32 @@ export default function ProductDetailPage() {
 
               <div className="flex gap-3">
                 <button
-                  onClick={handleAddToCart}
-                  disabled={product.stock <= 0}
-                  className="flex-1 gradient-bg text-white py-3.5 rounded-xl font-bold text-sm hover:shadow-xl hover:shadow-[#7C3AED]/20 transition-all disabled:opacity-30 flex items-center justify-center gap-2"
+                  onClick={handleBuyNow}
+                  disabled={product.stock <= 0 || buying}
+                  className="flex-1 bg-gradient-to-r from-[#E8A94C] to-[#D48832] text-[#0D0D12] py-3.5 rounded-xl font-bold text-sm hover:shadow-xl hover:shadow-[#E8A94C]/20 transition-all disabled:opacity-30 flex items-center justify-center gap-2 group"
                 >
-                  {addedToCart ? (
-                    <><Check className="w-4 h-4" /> Added to Cart!</>
+                  {buying ? (
+                    <>⏳ Processing...</>
                   ) : (
-                    <><ShoppingCart className="w-4 h-4" /> Add to Cart — ${(product.price * quantity).toFixed(2)}</>
+                    <><Zap className="w-4 h-4 group-hover:scale-110 transition-transform" /> Buy Now — ${(product.price * quantity).toFixed(2)}</>
                   )}
                 </button>
-                <button className="p-3.5 bg-[#0D0D12] border border-[#2A2A35] rounded-xl text-[#A1A1AA] hover:text-[#E8A94C] hover:border-[#E8A94C]/30 transition">
-                  <Heart className="w-5 h-5" />
+                <button
+                  onClick={handleAddToCart}
+                  disabled={product.stock <= 0}
+                  className="px-5 py-3.5 bg-[#0D0D12] border border-[#2A2A35] rounded-xl text-[#A1A1AA] hover:text-white hover:border-[#E8A94C]/30 transition-all flex items-center gap-2 group text-sm font-medium"
+                >
+                  {addedToCart ? (
+                    <><Check className="w-4 h-4 text-green-500" /> Added</>
+                  ) : (
+                    <><ShoppingCart className="w-4 h-4 group-hover:scale-110 transition-transform" /> Cart</>
+                  )}
                 </button>
-                <button className="p-3.5 bg-[#0D0D12] border border-[#2A2A35] rounded-xl text-[#A1A1AA] hover:text-[#E8A94C] transition">
-                  <Share2 className="w-5 h-5" />
-                </button>
+              </div>
+              {/* Secure Checkout Badge */}
+              <div className="flex items-center justify-center gap-4 mt-3 text-xs text-[#52525B]">
+                <span>🔒 Secure checkout via Shopify</span>
+                <span>💳 Visa • MC • PayPal • Apple Pay</span>
               </div>
             </div>
 
