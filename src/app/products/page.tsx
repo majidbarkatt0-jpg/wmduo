@@ -22,11 +22,11 @@ interface Product {
   sku: string
 }
 
-const CATEGORIES = ["All", "Audio", "Charging", "Gaming", "Laptop Accessories", "Phone Accessories", "Projectors", "Smart Home", "Wearables"]
 const SORT_OPTIONS = ["Newest", "Price: Low to High", "Price: High to Low", "Best Rating", "Most Reviews"]
 
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([])
+  const [categories, setCategories] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [category, setCategory] = useState("All")
   const [sort, setSort] = useState("Newest")
@@ -35,6 +35,16 @@ export default function ProductsPage() {
   const [showFilters, setShowFilters] = useState(false)
   const { addItem } = useCart()
   const [addingId, setAddingId] = useState<string | null>(null)
+
+  // Fetch categories on mount
+  useEffect(() => {
+    fetch("/api/categories")
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data)) setCategories(data)
+      })
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
     setLoading(true)
@@ -121,7 +131,7 @@ export default function ProductsPage() {
 
             {/* Category Filter Desktop */}
             <div className="hidden md:flex items-center gap-1.5 overflow-x-auto scrollbar-none">
-              {CATEGORIES.map(cat => (
+              {["All", ...categories].map(cat => (
                 <button
                   key={cat}
                   onClick={() => setCategory(cat)}
@@ -165,7 +175,7 @@ export default function ProductsPage() {
           {showFilters && (
             <div className="md:hidden mt-3 pb-3 space-y-3 border-t border-[#2A2A35] pt-3">
               <div className="flex flex-wrap gap-1.5">
-                {CATEGORIES.map(cat => (
+                {["All", ...categories].map(cat => (
                   <button
                     key={cat}
                     onClick={() => { setCategory(cat); setShowFilters(false) }}
