@@ -4,10 +4,10 @@ import { NextResponse } from 'next/server';
 // Read from environment variables (set in .env and Vercel)
 const SHOPIFY_STORE = process.env.SHOPIFY_STORE || '1iw1ss-rv.myshopify.com';
 const CLIENT_ID = process.env.SHOPIFY_CLIENT_ID || '28aa1a0fd5cbeac5c82605a534d9d0df';
-const CLIENT_SECRET = process.env.SHOPIFY_CLIENT_SECRET || 'SHOPIFY_CLIENT_SECRET';
+const CLIENT_SECRET = process.env.SHOPIFY_CLIENT_SECRET || '';
 
 // Access token from user (can also be set via env var)
-let accessToken: string | null = process.env.SHOPIFY_ACCESS_TOKEN || 'SHOPIFY_ACCESS_TOKEN' || null;
+let accessToken: string | null = process.env.SHOPIFY_ACCESS_TOKEN || null;
 
 export function getAccessToken() {
   return accessToken;

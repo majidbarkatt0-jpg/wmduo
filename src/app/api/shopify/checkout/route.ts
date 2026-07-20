@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAccessToken, getStoreUrl } from '@/lib/shopify';
 
-const SHOPIFY_STORE = '1iw1ss-rv.myshopify.com';
-const ACCESS_TOKEN = 'SHOPIFY_ACCESS_TOKEN';
+const SHOPIFY_STORE = process.env.SHOPIFY_STORE || '1iw1ss-rv.myshopify.com';
+const ACCESS_TOKEN = process.env.SHOPIFY_ACCESS_TOKEN || '';
 
 // GraphQL mutation to create a checkout (draft order with payment link)
 const CREATE_CHECKOUT_MUTATION = `
