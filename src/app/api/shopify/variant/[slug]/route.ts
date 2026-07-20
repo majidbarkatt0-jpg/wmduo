@@ -35,9 +35,9 @@ const VARIANT_MAP: Record<string, { variantId: string; shopifyId: string }> = {
 
 export async function GET(
   request: Request,
-  { params }: { params: { slug: string } }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
-  const slug = params.slug;
+  const { slug } = await params;
   
   // Try exact match
   if (VARIANT_MAP[slug]) {
