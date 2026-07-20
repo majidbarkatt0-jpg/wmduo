@@ -6,15 +6,26 @@ export default withAuth(
     const token = req.nextauth.token
     const path = req.nextUrl.pathname
 
-    if (path.startsWith("/admin") && token?.role !== "admin") {
-      return NextResponse.redirect(new URL("/login", req.url))
+    // Admin routes: require admin role
+    if (path.startsWith("/admin")) {
+      if (!token || token.role !== "admin") {
+        const loginUrl = new URL("/login", req.url)
+        loginUrl.searchParams.set("callbackUrl", path)
+        return NextResponse.redirect(loginUrl)
+      }
     }
 
     return NextResponse.next()
   },
   {
     callbacks: {
-      authorized: ({ token }) => !!token,
+      authorized: ({ token, req }) => {
+        const path = req.nextUrl.pathname
+        if (path.startsWith("/admin")) {
+          return token?.role === "admin"
+        }
+        return true
+      },
     },
   }
 )

@@ -5,7 +5,6 @@ import { useRouter, usePathname } from "next/navigation"
 import { useEffect } from "react"
 import Link from "next/link"
 import { LayoutDashboard, ShoppingBag, Package, LogOut, Home, ChevronRight, Menu, X } from "lucide-react"
-import { SessionProvider } from "next-auth/react"
 import { useState } from "react"
 
 function AdminSidebar({ onNavClick }: { onNavClick?: () => void }) {
@@ -86,9 +85,17 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (status === "unauthenticated") {
-      router.push("/login")
+      // Pass current admin path as callbackUrl so login redirects back here
+      const currentPath = window.location.pathname + window.location.search
+      router.push(`/login?callbackUrl=${encodeURIComponent(currentPath)}`)
     }
   }, [status, router])
+
+  useEffect(() => {
+    if (session && (session.user as any)?.role !== "admin") {
+      router.push("/")
+    }
+  }, [session, router])
 
   if (status === "loading") {
     return (
@@ -171,10 +178,6 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
   )
 }
 
-export default function AdminLayoutWrapper({ children }: { children: React.ReactNode }) {
-  return (
-    <SessionProvider>
-      <AdminLayoutContent>{children}</AdminLayoutContent>
-    </SessionProvider>
-  )
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  return <AdminLayoutContent>{children}</AdminLayoutContent>
 }

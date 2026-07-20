@@ -3,12 +3,12 @@ import "./globals.css"
 import Providers from "./providers"
 
 export const metadata: Metadata = {
-  title: "WM Duo™ — Premium CastleView Projector | #1 Fake Window",
-  description: "CastleView™ Mini Projector with 210° rotation, 4K support & stunning castle window effect. #1 TikTok viral fake window projector. 12,000+ happy customers.",
-  keywords: "castle projector, fake window projector, 210° rotating projector, mini smart projector, WM Duo, CastleView",
+  title: "WM Duo — Premium Tech Accessories & Smart Gadgets",
+  description: "Premium tech accessories — audio, charging, gaming, smart home, and lifestyle gear. Free shipping worldwide. 30-day returns.",
+  keywords: "WM Duo, tech accessories, smart gadgets, premium tech, audio, charging, gaming, smart home",
   openGraph: {
-    title: "WM Duo™ — #1 CastleView Rotating Smart Projector",
-    description: "Transform any room with the viral CastleView™ projector. 210° rotation, 4K support.",
+    title: "WM Duo — Premium Tech Accessories & Smart Gadgets",
+    description: "Discover premium tech accessories — audio, charging, gaming, smart home, and more. Free worldwide shipping.",
     url: "https://wmduo.com",
     siteName: "WM Duo",
     locale: "en_US",
@@ -20,10 +20,32 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
-        <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='28' font-size='28'>🏰</text></svg>" />
+        {/* Preload critical fonts */}
+        <link
+          rel="preload"
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Playfair+Display:wght@400;500;600;700;800&display=swap"
+          as="style"
+        />
+        <link
+          rel="preconnect"
+          href="https://fonts.googleapis.com"
+          crossOrigin="anonymous"
+        />
+        <link
+          rel="preconnect"
+          href="https://fonts.gstatic.com"
+          crossOrigin="anonymous"
+        />
+
+        {/* Favicon - SVG castle */}
+        <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏰</text></svg>" />
+
+        {/* Performance hints */}
+        <meta name="theme-color" content="#0D0D12" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+        <meta httpEquiv="x-dns-prefetch-control" content="on" />
+        <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+        <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
       </head>
       <body className="antialiased">
         <Providers>{children}</Providers>

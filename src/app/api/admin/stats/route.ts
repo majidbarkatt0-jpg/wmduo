@@ -18,7 +18,7 @@ export async function GET() {
       totalMessages,
       recentOrders,
       ordersByStatus,
-      monthlyRevenue,
+      allOrders,
     ] = await Promise.all([
       prisma.order.count(),
       prisma.order.aggregate({ _sum: { total: true } }),
@@ -34,14 +34,22 @@ export async function GET() {
         by: ["status"],
         _count: true,
       }),
-      prisma.$queryRaw`
-        SELECT strftime('%Y-%m', createdAt) as month, SUM(total) as revenue
-        FROM "Order"
-        GROUP BY month
-        ORDER BY month DESC
-        LIMIT 6
-      `,
+      prisma.order.findMany({
+        select: { total: true, createdAt: true },
+        orderBy: { createdAt: "desc" },
+      }),
     ])
+
+    // Calculate monthly revenue in JS
+    const monthlyMap: Record<string, number> = {}
+    for (const o of allOrders) {
+      const month = new Date(o.createdAt).toISOString().slice(0, 7) // "YYYY-MM"
+      monthlyMap[month] = (monthlyMap[month] || 0) + o.total
+    }
+    const monthlyRevenue = Object.entries(monthlyMap)
+      .map(([month, revenue]) => ({ month, revenue }))
+      .sort((a, b) => b.month.localeCompare(a.month))
+      .slice(0, 6)
 
     return NextResponse.json({
       totalOrders,

@@ -5,16 +5,21 @@ import { prisma } from "@/lib/prisma"
 
 export async function GET(request: Request) {
   const session = await getServerSession(authOptions)
-  if (!session || (session.user as any)?.role !== "admin") {
+  if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
   const { searchParams } = new URL(request.url)
   const status = searchParams.get("status")
   const limit = parseInt(searchParams.get("limit") || "50")
+  const isAdmin = (session.user as any)?.role === "admin"
 
   try {
     const where: any = {}
+    // Admins can see all orders, regular users only see their own
+    if (!isAdmin) {
+      where.userId = session.user.id
+    }
     if (status) where.status = status
 
     const orders = await prisma.order.findMany({
@@ -34,6 +39,12 @@ export async function POST(request: Request) {
     const data = await request.json()
     const { items, ...orderData } = data
 
+    // Require login to place order
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "You must be logged in to place an order" }, { status: 401 })
+    }
+
     // Generate order number
     const count = await prisma.order.count()
     const orderNumber = `WMD-${String(count + 1).padStart(5, "0")}`
@@ -42,6 +53,9 @@ export async function POST(request: Request) {
       data: {
         ...orderData,
         orderNumber,
+        userId: session.user.id,
+        email: session.user.email || orderData.email,
+        name: session.user.name || orderData.name,
         items: {
           create: items.map((item: any) => ({
             name: item.name,

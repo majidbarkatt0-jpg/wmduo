@@ -2,21 +2,20 @@
 
 import { useEffect, useRef } from "react"
 
-interface ParticleBackgroundProps {
-  count?: number
-  colors?: string[]
-  speed?: number
-  className?: string
+interface Particle {
+  x: number
+  y: number
+  size: number
+  speedX: number
+  speedY: number
+  opacity: number
+  hue: number
+  life: number
+  maxLife: number
 }
 
-export default function ParticleBackground({
-  count = 60,
-  colors = ["rgba(139,92,246,", "rgba(99,102,241,", "rgba(59,130,246,", "rgba(236,72,153,"],
-  speed = 0.3,
-  className = "",
-}: ParticleBackgroundProps) {
+export default function ParticleBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const animationRef = useRef<number>(0)
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -25,105 +24,129 @@ export default function ParticleBackground({
     const ctx = canvas.getContext("2d")
     if (!ctx) return
 
-    let particles: Array<{
-      x: number
-      y: number
-      size: number
-      speedX: number
-      speedY: number
-      opacity: number
-      color: string
-      pulse: number
-      pulseSpeed: number
-    }> = []
+    let animationId: number
+    let particles: Particle[] = []
+    let mouseX = 0
+    let mouseY = 0
 
     const resize = () => {
       canvas.width = window.innerWidth
       canvas.height = window.innerHeight
     }
-    resize()
-    window.addEventListener("resize", resize)
 
-    // Create particles
-    for (let i = 0; i < count; i++) {
-      particles.push({
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
-        size: Math.random() * 3 + 1,
-        speedX: (Math.random() - 0.5) * speed * 0.5,
-        speedY: (Math.random() - 0.5) * speed * 0.5,
-        opacity: Math.random() * 0.4 + 0.1,
-        color: colors[Math.floor(Math.random() * colors.length)],
-        pulse: Math.random() * Math.PI * 2,
-        pulseSpeed: Math.random() * 0.02 + 0.01,
-      })
+    const createParticle = (x?: number, y?: number): Particle => ({
+      x: x ?? Math.random() * canvas.width,
+      y: y ?? Math.random() * canvas.height,
+      size: Math.random() * 2 + 0.5,
+      speedX: (Math.random() - 0.5) * 0.3,
+      speedY: (Math.random() - 0.5) * 0.3 - 0.1,
+      opacity: Math.random() * 0.5 + 0.1,
+      hue: Math.random() > 0.7 ? 42 : 280, // Gold or purple
+      life: 0,
+      maxLife: Math.random() * 300 + 200,
+    })
+
+    // Initialize particles
+    const particleCount = Math.min(Math.floor((canvas.width * canvas.height) / 12000), 80)
+    for (let i = 0; i < particleCount; i++) {
+      particles.push(createParticle())
     }
 
-    // Connection distance
-    const maxDist = 120
-
     const animate = () => {
-      if (!canvas || !ctx) return
       ctx.clearRect(0, 0, canvas.width, canvas.height)
 
-      // Update & draw particles
-      for (let i = 0; i < particles.length; i++) {
-        const p = particles[i]
-
+      particles.forEach((p, i) => {
         // Update position
         p.x += p.speedX
         p.y += p.speedY
+        p.life++
 
-        // Pulse opacity
-        p.pulse += p.pulseSpeed
-        const pulseOpacity = p.opacity * (0.7 + 0.3 * Math.sin(p.pulse))
+        // Mouse interaction
+        const dx = mouseX - p.x
+        const dy = mouseY - p.y
+        const dist = Math.sqrt(dx * dx + dy * dy)
+        if (dist < 150) {
+          const force = (150 - dist) / 150
+          p.x -= dx * force * 0.01
+          p.y -= dy * force * 0.01
+          p.opacity = Math.min(p.opacity + 0.02, 0.8)
+        }
 
-        // Wrap around
-        if (p.x < 0) p.x = canvas.width
-        if (p.x > canvas.width) p.x = 0
-        if (p.y < 0) p.y = canvas.height
-        if (p.y > canvas.height) p.y = 0
+        // Reset if out of bounds or expired
+        if (
+          p.life > p.maxLife ||
+          p.x < -10 || p.x > canvas.width + 10 ||
+          p.y < -10 || p.y > canvas.height + 10
+        ) {
+          particles[i] = createParticle(
+            Math.random() * canvas.width,
+            -5
+          )
+        }
 
         // Draw particle
+        const gradient = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * 3)
+        const alpha = p.opacity * (1 - p.life / p.maxLife)
+        gradient.addColorStop(0, `hsla(${p.hue}, 80%, 70%, ${alpha})`)
+        gradient.addColorStop(0.5, `hsla(${p.hue}, 60%, 50%, ${alpha * 0.3})`)
+        gradient.addColorStop(1, `hsla(${p.hue}, 40%, 30%, 0)`)
+
         ctx.beginPath()
-        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2)
-        ctx.fillStyle = p.color + pulseOpacity + ")"
+        ctx.arc(p.x, p.y, p.size * 3, 0, Math.PI * 2)
+        ctx.fillStyle = gradient
         ctx.fill()
 
-        // Draw connections
-        for (let j = i + 1; j < particles.length; j++) {
-          const p2 = particles[j]
+        // Draw connections between nearby particles
+        particles.slice(i + 1).forEach(p2 => {
           const dx = p.x - p2.x
           const dy = p.y - p2.y
           const dist = Math.sqrt(dx * dx + dy * dy)
-
-          if (dist < maxDist) {
-            const opacity = (1 - dist / maxDist) * 0.12
+          if (dist < 120) {
             ctx.beginPath()
             ctx.moveTo(p.x, p.y)
             ctx.lineTo(p2.x, p2.y)
-            ctx.strokeStyle = colors[0] + opacity + ")"
+            ctx.strokeStyle = `hsla(${p.hue}, 60%, 60%, ${alpha * 0.1 * (1 - dist / 120)})`
             ctx.lineWidth = 0.5
             ctx.stroke()
           }
-        }
-      }
+        })
+      })
 
-      animationRef.current = requestAnimationFrame(animate)
+      animationId = requestAnimationFrame(animate)
     }
 
+    resize()
     animate()
 
-    return () => {
-      cancelAnimationFrame(animationRef.current)
-      window.removeEventListener("resize", resize)
+    const handleResize = () => resize()
+    const handleMouse = (e: MouseEvent) => {
+      mouseX = e.clientX
+      mouseY = e.clientY
     }
-  }, [count, colors, speed])
+    const handleTouch = (e: TouchEvent) => {
+      if (e.touches[0]) {
+        mouseX = e.touches[0].clientX
+        mouseY = e.touches[0].clientY
+      }
+    }
+
+    window.addEventListener("resize", handleResize)
+    window.addEventListener("mousemove", handleMouse)
+    window.addEventListener("touchmove", handleTouch)
+
+    return () => {
+      cancelAnimationFrame(animationId)
+      window.removeEventListener("resize", handleResize)
+      window.removeEventListener("mousemove", handleMouse)
+      window.removeEventListener("touchmove", handleTouch)
+    }
+  }, [])
 
   return (
     <canvas
       ref={canvasRef}
-      className={`fixed inset-0 pointer-events-none z-0 ${className}`}
+      className="fixed inset-0 pointer-events-none z-0"
+      style={{ width: "100%", height: "100%" }}
     />
   )
 }

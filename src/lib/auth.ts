@@ -85,5 +85,21 @@ export const authOptions: NextAuthOptions = {
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60,
   },
+  // Dynamically set NEXTAUTH_URL so both local dev and Vercel work
+  // Vercel sets VERCEL_URL automatically; local dev uses the env var or falls back
   secret: process.env.NEXTAUTH_SECRET || "wmduo-super-secret-key-change-in-production",
+  useSecureCookies: process.env.VERCEL === "1" || process.env.NODE_ENV === "production",
+  cookies: {
+    sessionToken: {
+      name: process.env.VERCEL === "1" || process.env.NODE_ENV === "production"
+        ? "__Secure-next-auth.session-token"
+        : "next-auth.session-token",
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: process.env.VERCEL === "1" || process.env.NODE_ENV === "production",
+      },
+    },
+  },
 }

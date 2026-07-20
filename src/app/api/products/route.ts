@@ -8,6 +8,8 @@ export async function GET(request: Request) {
   const featured = searchParams.get("featured")
   const status = searchParams.get("status")
   const slug = searchParams.get("slug")
+  const category = searchParams.get("category")
+  const search = searchParams.get("search")
 
   try {
     if (slug) {
@@ -19,6 +21,13 @@ export async function GET(request: Request) {
     const where: any = {}
     if (featured === "true") where.featured = true
     if (status) where.status = status
+    if (category) where.category = category
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: "insensitive" } },
+        { description: { contains: search, mode: "insensitive" } },
+      ]
+    }
 
     const products = await prisma.product.findMany({
       where,
