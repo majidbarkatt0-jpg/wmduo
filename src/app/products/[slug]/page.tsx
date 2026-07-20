@@ -104,12 +104,22 @@ export default function ProductDetailPage() {
       // First add to local cart
       handleAddToCart()
       
+      // Get Shopify variant ID for this product
+      const variantRes = await fetch(`/api/shopify/variant/${slug}`)
+      const variantData = await variantRes.json()
+      
+      if (!variantData.success) {
+        alert('This product is not available for checkout yet. Please try again later.')
+        setBuying(false)
+        return
+      }
+      
       // Create Shopify checkout
       const res = await fetch('/api/shopify/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          variantId: "gid://shopify/ProductVariant/48020601274519",
+          variantId: variantData.variantId,
           quantity: quantity,
         }),
       })
