@@ -18,7 +18,7 @@ import {
   Heart, Quote, ChevronRight, ExternalLink,
   HeadphonesIcon, SmartphoneIcon, Laptop, Watch,
   Lightbulb, SpeakerIcon, Cpu, ChevronDown,
-  Layers, Palette, RefreshCw, Gift, Gem
+  Layers, Palette, RefreshCw, Gift, Gem, Wind
 } from "lucide-react"
 
 // ===== HOOK: SCROLL REVEAL =====
@@ -61,17 +61,18 @@ function RevealWrapper({ children, className = "", delay = 0 }: { children: Reac
   )
 }
 
-// ===== PRODUCT CATEGORIES =====
-const CATEGORIES = [
-  { name: "Audio", icon: HeadphonesIcon, desc: "Premium earbuds, headphones & speakers", color: "#E8A94C", emoji: "🎧", count: 3 },
-  { name: "Charging", icon: Battery, desc: "GaN chargers, cables & power banks", color: "#34D399", emoji: "⚡", count: 3 },
-  { name: "Gaming", icon: Gamepad2, desc: "Controllers, cables & gaming gear", color: "#6C63FF", emoji: "🎮", count: 2 },
-  { name: "Laptop Accessories", icon: Laptop, desc: "Sleeves, stands & USB-C hubs", color: "#F97316", emoji: "💻", count: 3 },
-  { name: "Phone Accessories", icon: SmartphoneIcon, desc: "Cases, grips & magnetic stands", color: "#EC4899", emoji: "📱", count: 3 },
-  { name: "Smart Home", icon: Lightbulb, desc: "Smart bulbs, plugs & security", color: "#06B6D4", emoji: "💡", count: 3 },
-  { name: "Wearables", icon: Watch, desc: "Smart watches & fitness trackers", color: "#A855F7", emoji: "⌚", count: 1 },
-  { name: "Projectors", icon: Film, desc: "Mini projectors & accessories", color: "#E8A94C", emoji: "📽️", count: 1 },
-]
+// ===== CATEGORY ICONS (for known categories) =====
+const CATEGORY_META: Record<string, { icon: any; color: string; emoji: string; desc: string }> = {
+  "Projectors": { icon: Film, color: "#E8A94C", emoji: "📽️", desc: "Smart projectors for home cinema" },
+  "Home & Wellness": { icon: Sparkles, color: "#34D399", emoji: "🌿", desc: "Wellness essentials for your home" },
+  "Auto Accessories": { icon: Cpu, color: "#06B6D4", emoji: "🚗", desc: "Smart gadgets for your car" },
+  "Gadgets & Tech": { icon: Zap, color: "#6C63FF", emoji: "🔧", desc: "Clever tech for everyday life" },
+  "Air Quality": { icon: Wind, color: "#A855F7", emoji: "💨", desc: "Breathe cleaner at home or work" },
+  "Home Cooling": { icon: Wind, color: "#F97316", emoji: "🌀", desc: "Stay cool with premium fans" },
+}
+
+// Fallback for unknown categories
+const FALLBACK_CAT_META = { icon: Package, color: "#E8A94C", emoji: "📦", desc: "Premium quality products" }
 
 // ===== STATS =====
 const STATS = [
@@ -93,12 +94,12 @@ const FEATURES = [
 
 // ===== REVIEWS =====
 const REVIEWS = [
-  { name: "Ahmed K.", location: "Dubai, UAE", rating: 5, title: "Exceptional quality!", text: "Ordered the GaN charger and it arrived in 5 days. The build quality is premium — feels like a $80 charger, not a $35 one." },
-  { name: "Sarah M.", location: "London, UK", rating: 5, title: "Beautiful products", text: "The leather sleeve is gorgeous. Real quality craftsmanship. My MacBook fits perfectly and looks so elegant." },
+  { name: "Ahmed K.", location: "Dubai, UAE", rating: 5, title: "Exceptional quality!", text: "Ordered my projector and it arrived in 5 days. The build quality is premium — feels like a $200 device, not a $90 one." },
+  { name: "Sarah M.", location: "London, UK", rating: 5, title: "Love my diffuser", text: "The essential oil diffuser is gorgeous. Real quality craftsmanship. Fills my whole living room with a beautiful mist." },
   { name: "Raj P.", location: "Mumbai, India", rating: 5, title: "Best customer service", text: "Had an issue with my order and they resolved it within 2 hours on WhatsApp. Truly exceptional support." },
-  { name: "Emma L.", location: "Sydney, AUS", rating: 4, title: "Great value for money", text: "The wireless earbuds sound incredible for the price. Battery life is amazing. Would recommend!" },
+  { name: "Emma L.", location: "Sydney, AUS", rating: 4, title: "Great value for money", text: "The air purifier is incredible for the price. My allergies have improved so much. Would recommend!" },
   { name: "Carlos G.", location: "Mexico City, MX", rating: 5, title: "Fast shipping!", text: "Ordered on Monday, arrived by Friday from across the world. Very impressed with the shipping speed." },
-  { name: "Aisha R.", location: "Riyadh, KSA", rating: 5, title: "My go-to tech store", text: "Third time ordering from WM Duo. Always consistent quality. The gaming accessories are top-tier." },
+  { name: "Aisha R.", location: "Riyadh, KSA", rating: 5, title: "My go-to tech store", text: "Third time ordering from WM Duo. Always consistent quality. The products are always top-tier." },
 ]
 
 // ===== FAQ =====
@@ -234,10 +235,13 @@ function ProductCard({ product, index }: { product: any; index: number }) {
 }
 
 // ===== CATEGORY CARD =====
-function CategoryCard({ cat, index }: { cat: typeof CATEGORIES[0]; index: number }) {
+function CategoryCard({ name, count, index }: { name: string; count: number; index: number }) {
+  const meta = CATEGORY_META[name] || FALLBACK_CAT_META
+  const color = meta.color
+
   return (
     <Link
-      href={`/products?category=${encodeURIComponent(cat.name)}`}
+      href={`/products?category=${encodeURIComponent(name)}`}
       className="group relative bg-gradient-to-b from-[#1A1A23]/60 to-[#14141A]/60 backdrop-blur-xl rounded-3xl border border-[#2A2A35]/40 p-6 transition-all duration-500 hover:border-[#E8A94C]/25 hover:shadow-2xl hover:shadow-[#E8A94C]/5 overflow-hidden"
       style={{
         animation: `float-in 0.9s cubic-bezier(0.16, 1, 0.3, 1) ${index * 80}ms forwards`,
@@ -247,30 +251,30 @@ function CategoryCard({ cat, index }: { cat: typeof CATEGORIES[0]; index: number
       {/* Hover glow */}
       <div
         className="absolute -inset-1 opacity-0 group-hover:opacity-100 transition-opacity duration-700 rounded-3xl blur-2xl pointer-events-none"
-        style={{ background: `radial-gradient(ellipse at center, ${cat.color}15, transparent 70%)` }}
+        style={{ background: `radial-gradient(ellipse at center, ${color}15, transparent 70%)` }}
       />
       {/* Border glow */}
       <div
         className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-3xl pointer-events-none"
-        style={{ boxShadow: `inset 0 0 30px ${cat.color}08` }}
+        style={{ boxShadow: `inset 0 0 30px ${color}08` }}
       />
 
       {/* Emoji icon */}
       <div className="relative z-10 mb-4">
         <div
           className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl transition-all duration-500 group-hover:scale-110 group-hover:-translate-y-1"
-          style={{ background: `${cat.color}15` }}
+          style={{ background: `${color}15` }}
         >
-          {cat.emoji}
+          {meta.emoji}
         </div>
       </div>
 
       {/* Content */}
       <div className="relative z-10">
-        <h3 className="font-bold text-white text-base mb-1 group-hover:text-[#E8A94C] transition-colors duration-300">{cat.name}</h3>
-        <p className="text-xs text-[#71717A] mb-3 line-clamp-2">{cat.desc}</p>
-        <div className="flex items-center gap-1 text-xs font-semibold" style={{ color: cat.color }}>
-          <span>{cat.count} products</span>
+        <h3 className="font-bold text-white text-base mb-1 group-hover:text-[#E8A94C] transition-colors duration-300">{name}</h3>
+        <p className="text-xs text-[#71717A] mb-3 line-clamp-2">{meta.desc}</p>
+        <div className="flex items-center gap-1 text-xs font-semibold" style={{ color }}>
+          <span>{count} product{count !== 1 ? "s" : ""}</span>
           <ChevronRight className="w-3 h-3 group-hover:translate-x-1 transition-transform duration-300" />
         </div>
       </div>
@@ -309,6 +313,17 @@ function StatsBanner() {
 
 // ===== HERO SECTION =====
 function HeroSection() {
+  const [heroCats, setHeroCats] = useState<{ name: string; count: number }[]>([])
+
+  useEffect(() => {
+    fetch("/api/categories")
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data)) setHeroCats(data.slice(0, 4))
+      })
+      .catch(() => {})
+  }, [])
+
   return (
     <section className="relative min-h-[90vh] flex items-center pt-40 sm:pt-36 pb-20 overflow-hidden">
       {/* Aurora background */}
@@ -348,7 +363,7 @@ function HeroSection() {
           <RevealWrapper delay={100}>
             <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-[#1A1A23]/80 backdrop-blur-xl border border-[#2A2A35]/50 rounded-full">
               <Sparkles className="w-3.5 h-3.5 text-[#E8A94C]" />
-              <span className="text-xs font-medium text-[#A1A1AA]">Premium Tech Accessories Store</span>
+              <span className="text-xs font-medium text-[#A1A1AA]">Premium Smart Gadgets & Home Store</span>
             </div>
           </RevealWrapper>
 
@@ -362,7 +377,7 @@ function HeroSection() {
 
           <RevealWrapper delay={300}>
             <p className="text-lg text-[#A1A1AA] leading-relaxed max-w-md text-balance">
-              Curated audio, charging, gaming, smart home & more. Every product tested for quality — backed by our satisfaction guarantee.
+              Smart projectors, air purifiers, home wellness & smart gadgets — tested for quality, backed by our satisfaction guarantee.
             </p>
           </RevealWrapper>
 
@@ -399,24 +414,27 @@ function HeroSection() {
 
         {/* Hero Right - Floating Category Showcase */}
         <div className="hidden lg:grid grid-cols-2 gap-3">
-          {CATEGORIES.slice(0, 4).map((cat, i) => (
-            <Link
-              key={cat.name}
-              href={`/products?category=${encodeURIComponent(cat.name)}`}
-              className="group aspect-square rounded-2xl bg-gradient-to-br from-[#1A1A23]/60 to-[#14141A]/60 backdrop-blur-xl border border-[#2A2A35]/40 flex flex-col items-center justify-center gap-3 hover:border-[#E8A94C]/25 hover:-translate-y-1.5 transition-all duration-500 hover:shadow-xl hover:shadow-[#E8A94C]/5 overflow-hidden relative"
-              style={{
-                animation: `float-in 0.9s cubic-bezier(0.16, 1, 0.3, 1) ${(i + 4) * 80}ms forwards`,
-                opacity: 0,
-              }}
-            >
-              <div
-                className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700"
-                style={{ background: `radial-gradient(ellipse at center, ${cat.color}10, transparent 70%)` }}
-              />
-              <span className="text-5xl group-hover:scale-125 group-hover:-translate-y-1 transition-all duration-500">{cat.emoji}</span>
-              <span className="text-sm font-bold text-white group-hover:text-[#E8A94C] transition-colors">{cat.name}</span>
-            </Link>
-          ))}
+          {heroCats.map((cat, i) => {
+            const meta = CATEGORY_META[cat.name] || FALLBACK_CAT_META
+            return (
+              <Link
+                key={cat.name}
+                href={`/products?category=${encodeURIComponent(cat.name)}`}
+                className="group aspect-square rounded-2xl bg-gradient-to-br from-[#1A1A23]/60 to-[#14141A]/60 backdrop-blur-xl border border-[#2A2A35]/40 flex flex-col items-center justify-center gap-3 hover:border-[#E8A94C]/25 hover:-translate-y-1.5 transition-all duration-500 hover:shadow-xl hover:shadow-[#E8A94C]/5 overflow-hidden relative"
+                style={{
+                  animation: `float-in 0.9s cubic-bezier(0.16, 1, 0.3, 1) ${(i + 4) * 80}ms forwards`,
+                  opacity: 0,
+                }}
+              >
+                <div
+                  className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700"
+                  style={{ background: `radial-gradient(ellipse at center, ${meta.color}10, transparent 70%)` }}
+                />
+                <span className="text-5xl group-hover:scale-125 group-hover:-translate-y-1 transition-all duration-500">{meta.emoji}</span>
+                <span className="text-sm font-bold text-white group-hover:text-[#E8A94C] transition-colors">{cat.name}</span>
+              </Link>
+            )
+          })}
         </div>
       </div>
 
@@ -458,7 +476,7 @@ function FeaturedProductsSection() {
               Premium Tech <span className="gradient-text-glow">Accessories</span>
             </h2>
             <p className="text-[#71717A] max-w-2xl mx-auto text-sm sm:text-base">
-              Curated products across audio, charging, gaming, smart home & more — tested for quality, built to last.
+               From smart projectors to air purifiers — every product tested for quality, built to last.
             </p>
           </div>
         </RevealWrapper>
@@ -501,6 +519,19 @@ function FeaturedProductsSection() {
 
 // ===== CATEGORIES SECTION =====
 function CategoriesSection() {
+  const [cats, setCats] = useState<{ name: string; count: number }[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetch("/api/categories")
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data)) setCats(data)
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [])
+
   return (
     <section id="categories" className="relative py-20 sm:py-28 overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-b from-[#0D0D12] via-[#14141A] to-[#0D0D12]" />
@@ -517,15 +548,24 @@ function CategoriesSection() {
               Shop By <span className="gradient-text-cool">Category</span>
             </h2>
             <p className="text-[#71717A] max-w-xl mx-auto text-sm sm:text-base">
-              Everything you need — from audio to smart home, all premium quality.
+              Browse our curated collection of premium tech and lifestyle products.
             </p>
           </div>
         </RevealWrapper>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          {CATEGORIES.map((cat, i) => (
-            <CategoryCard key={cat.name} cat={cat} index={i} />
-          ))}
+          {loading
+            ? Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="bg-[#1A1A23]/60 rounded-3xl border border-[#2A2A35]/40 p-6 animate-pulse">
+                  <div className="w-14 h-14 rounded-2xl bg-[#2A2A35]/50 mb-4" />
+                  <div className="h-4 bg-[#2A2A35]/50 rounded w-3/4 mb-2" />
+                  <div className="h-3 bg-[#2A2A35]/50 rounded w-1/2" />
+                </div>
+              ))
+            : cats.map((cat, i) => (
+                <CategoryCard key={cat.name} name={cat.name} count={cat.count} index={i} />
+              ))
+          }
         </div>
       </div>
     </section>
