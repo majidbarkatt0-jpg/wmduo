@@ -81,6 +81,15 @@ export const SUPPLIER_MAP: Record<string, {
     ourPrice: 89.99,
     shipping: 8.00,
     notes: "AliExpress - Ships from China (12-18 days)"
+  },
+  "WM-FLAME-DIFF-001": {
+    name: "Flame Aroma Diffuser - 3D Fireplace Essential Oil Diffuser",
+    type: "cj",
+    url: "https://cjdropshipping.com/product/new-flame-aromatherapy-machine-colorful-essential-oil-diffuser-home-large-fog-volume-flame-humidifier-3d-flame-fireplace-machine-p-2410050244571620700.html",
+    costPrice: 12.00,
+    ourPrice: 57.99,
+    shipping: 5.00,
+    notes: "CJ Dropshipping - Ships from China (10-15 days) or US warehouse (5-7 days). Remote control + USB-C included."
   }
 };
 
@@ -123,7 +132,7 @@ export function calculateOrderCost(items: OrderItem[]): { totalCost: number; tot
   return {
     totalCost,
     totalShipping,
-    totalProfit: 0 - totalCost - totalShipping, // Will be set when we know the sell price
+    totalProfit: 0, // Will be calculated when sell price is known
   };
 }
 

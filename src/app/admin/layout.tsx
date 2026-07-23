@@ -1,6 +1,6 @@
 "use client"
 
-import { useSession } from "next-auth/react"
+import { useSession, signOut } from "next-auth/react"
 import { useRouter, usePathname } from "next/navigation"
 import { useEffect } from "react"
 import Link from "next/link"
@@ -67,7 +67,7 @@ function AdminSidebar({ onNavClick }: { onNavClick?: () => void }) {
         </Link>
         <Link
           href="/login"
-          onClick={() => { if (onNavClick) onNavClick(); fetch("/api/auth/signout", { method: "POST" }) }}
+          onClick={() => { if (onNavClick) onNavClick(); signOut({ callbackUrl: "/login" }) }}
           className="flex items-center gap-3 px-4 py-2.5 rounded-2xl text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all duration-200"
         >
           <LogOut className="w-4 h-4" />
@@ -81,15 +81,15 @@ function AdminSidebar({ onNavClick }: { onNavClick?: () => void }) {
 function AdminLayoutContent({ children }: { children: React.ReactNode }) {
   const { data: session, status } = useSession()
   const router = useRouter()
+  const pathname = usePathname()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   useEffect(() => {
     if (status === "unauthenticated") {
-      // Pass current admin path as callbackUrl so login redirects back here
-      const currentPath = window.location.pathname + window.location.search
+      const currentPath = pathname + window.location.search
       router.push(`/login?callbackUrl=${encodeURIComponent(currentPath)}`)
     }
-  }, [status, router])
+  }, [status, router, pathname])
 
   useEffect(() => {
     if (session && (session.user as any)?.role !== "admin") {

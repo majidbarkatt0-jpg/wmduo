@@ -1,3 +1,6 @@
+# Favicon: serve logo.png as favicon.ico with correct content type
+/favicon.ico
+  Content-Type: image/png
+
 /*
-  # CSP is managed via next.config.ts headers() — this file is intentionally empty
-  # to avoid conflicts between Vercel static _headers and Next.js middleware headers.
+  # CSP is managed via next.config.ts headers()

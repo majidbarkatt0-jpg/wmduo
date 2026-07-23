@@ -1,26 +1,9 @@
 "use client"
-
 import { useState, Suspense } from "react"
 import { signIn } from "next-auth/react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
-import { Mail, Lock, Eye, EyeOff, ArrowRight, Shield, Sparkles } from "lucide-react"
-
-// Wrapper needed because useSearchParams() requires Suspense boundary in Next.js 16
-export default function LoginPage() {
-  return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-[#0D0D12] flex items-center justify-center">
-        <svg className="animate-spin h-8 w-8 text-[#A78BFA]" viewBox="0 0 24 24">
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-        </svg>
-      </div>
-    }>
-      <LoginForm />
-    </Suspense>
-  )
-}
+import CustomCursor from "@/components/CustomCursor"
 
 function LoginForm() {
   const router = useRouter()
@@ -29,201 +12,113 @@ function LoginForm() {
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
-  const [showPassword, setShowPassword] = useState(false)
-  const [rememberMe, setRememberMe] = useState(false)
 
-  // Read callbackUrl from URL — redirect there after login
-  const callbackUrl = searchParams?.get("callbackUrl") || "/"
+  const rawCallback = searchParams?.get("callbackUrl") || "/"
+  let callbackUrl = rawCallback
+  try {
+    const url = new URL(rawCallback, window.location.origin)
+    if (url.origin !== window.location.origin) callbackUrl = "/"
+  } catch {
+    if (!rawCallback.startsWith("/")) callbackUrl = "/"
+  }
+  const adminKey = searchParams?.get("__admin") || ""
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
     setLoading(true)
-
     try {
-      const result = await signIn("credentials", {
-        email,
-        password,
-        redirect: false,
-      })
-
+      const result = await signIn("credentials", { email, password, redirect: false })
       if (result?.error) {
-        const errorMessages: Record<string, string> = {
-          "No user found with this email": "No account found with this email.",
-          "Invalid password": "Incorrect password. Please try again.",
-          "Email and password required": "Please enter both email and password.",
+        const msgs: Record<string, string> = {
           "CredentialsSignin": "Invalid email or password.",
+          "Too many login attempts. Please try again in 60 seconds.": "Too many attempts. Please wait 60 seconds.",
         }
-        setError(errorMessages[result.error] || result.error)
+        setError(msgs[result.error] || result.error)
         setPassword("")
       } else {
-        // After login, check if user is admin before redirecting to /admin/*
-        const isAdminRedirect = callbackUrl.startsWith("/admin")
-        if (isAdminRedirect) {
-          // Get session to verify admin role before redirecting
-          const { getSession } = await import("next-auth/react")
-          const session = await getSession()
-          if ((session?.user as any)?.role !== "admin") {
-            router.push("/")
-            router.refresh()
-            return
-          }
+        const { getSession } = await import("next-auth/react")
+        let session: any = null
+        for (let i = 0; i < 5; i++) { session = await getSession(); if (session) break; await new Promise(r => setTimeout(r, 200)) }
+        if (callbackUrl.startsWith("/admin") && session?.user?.role !== "admin") {
+          router.push("/"); router.refresh(); return
         }
-        router.push(callbackUrl)
-        router.refresh()
+        const redirectUrl = adminKey && callbackUrl.includes('/admin')
+          ? `${callbackUrl}${callbackUrl.includes('?') ? '&' : '?'}__admin=${encodeURIComponent(adminKey)}`
+          : callbackUrl
+        router.push(redirectUrl); router.refresh()
       }
-    } catch {
-      setError("Connection error. Please try again.")
-    } finally { setLoading(false) }
+    } catch { setError("Connection error. Please try again.") }
+    finally { setLoading(false) }
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0D0D12] relative overflow-hidden px-4">
-      {/* Dark ambient background */}
-      <div className="absolute inset-0 bg-gradient-to-b from-[#0D0D12] via-[#0D0D12] to-[#14141A]" />
-      <div className="absolute -top-40 -right-40 w-96 h-96 bg-[#6C63FF]/5 rounded-full blur-3xl animate-float" />
-      <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-[#E8A94C]/5 rounded-full blur-3xl animate-float" style={{ animationDelay: "2s" }} />
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-[radial-gradient(ellipse_at_center,_rgba(232,169,76,0.03)_0%,_transparent_70%)]" />
-
+    <div className="min-h-screen bg-white-soft flex items-center justify-center px-4 relative">
+      <CustomCursor />
       <div className="w-full max-w-md relative z-10">
-        {/* Logo */}
-        <Link href="/" className="flex items-center justify-center gap-3 mb-10 group">
-          <span className="text-4xl gradient-text font-bold group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">◈</span>
-          <span className="text-3xl font-extrabold tracking-tight transition-transform duration-300 group-hover:translate-y-[-2px]">
-            <span className="text-white">WM</span>
-            <span className="text-[#A78BFA]">DUO</span>
+        <Link href="/" className="flex items-center justify-center gap-2 mb-10 no-underline group">
+          <span className="font-['Playfair_Display',serif] text-3xl font-bold text-brown-deep">
+            WM<span className="text-gold italic">DUO</span>
           </span>
         </Link>
 
-        {/* Login Card */}
-        <div className="bg-[#1A1A23] rounded-3xl shadow-premium-xl border border-[#2A2A35] p-8 sm:p-10 relative overflow-hidden">
-          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#E8A94C] via-[#6C63FF] to-[#7C3AED]" />
-          <div className="absolute -top-10 -right-10 w-32 h-32 bg-[#6C63FF]/5 rounded-full blur-2xl animate-float" />
-          <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-[#E8A94C]/5 rounded-full blur-2xl animate-float" style={{ animationDelay: "1.5s" }} />
-
-          <div className="text-center mb-8 relative">
-            <div className="w-16 h-16 gradient-bg rounded-2xl flex items-center justify-center mx-auto mb-5 shadow-lg shadow-[#7C3AED]/20 group hover:scale-110 transition-transform duration-300">
-              <Shield className="w-8 h-8 text-white" />
-            </div>
-            <h1 className="font-['Playfair_Display',serif] text-2xl font-bold text-white">Welcome Back</h1>
-            <p className="text-[#A1A1AA] text-sm mt-1.5">Sign in to your account</p>
+        <div className="bento-card bento-card--white !p-8 sm:!p-10">
+          <div className="text-center mb-6">
+            <span className="text-3xl mb-2 block">✦</span>
+            <h1 className="font-['Playfair_Display',serif] text-2xl font-bold text-brown-deep">Welcome Back</h1>
+            <p className="text-sm text-brown-mid mt-1">Sign in to your account</p>
           </div>
 
           {error && (
-            <div className="bg-red-500/10 backdrop-blur-sm text-red-400 text-sm rounded-2xl px-5 py-4 mb-6 border border-red-500/20 flex items-start gap-3">
-              <span className="text-lg leading-none mt-0.5">!</span>
-              <div>
-                <p className="font-semibold">Login Failed</p>
-                <p className="text-red-400/80 text-xs mt-0.5">{error}</p>
-              </div>
+            <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3 mb-5 flex items-start gap-2">
+              <span>!</span>
+              <span>{error}</span>
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-semibold text-[#E4E4E7] mb-1.5">Email Address</label>
-              <div className="relative group">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#52525B] group-focus-within:text-[#E8A94C] transition-colors" />
-                <input
-                  type="email"
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  required
-                  autoComplete="email"
-                  className="w-full pl-11 pr-4 py-3 bg-[#0D0D12] border border-[#2A2A35] rounded-2xl focus:border-[#E8A94C] focus:ring-4 focus:ring-[#E8A94C]/10 outline-none transition-all text-sm text-white placeholder-[#52525B]"
-                  placeholder="you@example.com"
-                />
-              </div>
+              <label className="text-[10px] font-semibold tracking-widest uppercase text-brown-mid block mb-1.5">Email</label>
+              <input type="email" value={email} onChange={e => setEmail(e.target.value)} required autoComplete="email"
+                className="w-full bg-white-soft border border-gold/10 rounded-xl px-4 py-3 text-sm text-brown-deep placeholder-brown-light outline-none focus:border-gold/40 transition-all"
+                placeholder="you@example.com" />
             </div>
-
             <div>
-              <label className="block text-sm font-semibold text-[#E4E4E7] mb-1.5">Password</label>
-              <div className="relative group">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#52525B] group-focus-within:text-[#E8A94C] transition-colors" />
-                <input
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  required
-                  autoComplete="current-password"
-                  className="w-full pl-11 pr-11 py-3 bg-[#0D0D12] border border-[#2A2A35] rounded-2xl focus:border-[#E8A94C] focus:ring-4 focus:ring-[#E8A94C]/10 outline-none transition-all text-sm text-white placeholder-[#52525B]"
-                  placeholder="Enter your password"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-[#52525B] hover:text-[#A1A1AA] transition-colors"
-                  tabIndex={-1}
-                >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
+              <label className="text-[10px] font-semibold tracking-widest uppercase text-brown-mid block mb-1.5">Password</label>
+              <input type="password" value={password} onChange={e => setPassword(e.target.value)} required autoComplete="current-password"
+                className="w-full bg-white-soft border border-gold/10 rounded-xl px-4 py-3 text-sm text-brown-deep placeholder-brown-light outline-none focus:border-gold/40 transition-all"
+                placeholder="Enter your password" />
             </div>
-
-            <div className="flex items-center justify-between">
-              <label className="flex items-center gap-2 cursor-pointer group">
-                <input
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={e => setRememberMe(e.target.checked)}
-                  className="w-4 h-4 rounded border-[#2A2A35] bg-[#0D0D12] text-[#E8A94C] focus:ring-[#E8A94C]/30 cursor-pointer"
-                />
-                <span className="text-sm text-[#A1A1AA] group-hover:text-[#E4E4E7] transition-colors">Remember me</span>
-              </label>
-              <Link
-                href="/forgot-password"
-                className="text-sm text-[#E8A94C] font-semibold hover:text-[#D48832] hover:underline transition-all"
-              >
-                Forgot Password?
-              </Link>
+            <div className="flex items-center justify-between text-xs">
+              <Link href="/forgot-password" className="text-gold font-semibold hover:underline">Forgot Password?</Link>
             </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full gradient-bg text-white py-3.5 rounded-2xl font-bold text-base hover:shadow-xl hover:shadow-[#7C3AED]/20 transition-all duration-300 disabled:opacity-50 flex items-center justify-center gap-2 group relative overflow-hidden"
-            >
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-              {loading ? (
-                <span className="flex items-center gap-2 relative z-10">
-                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                  </svg>
-                  Signing in...
-                </span>
-              ) : (
-                <span className="flex items-center gap-2 relative z-10">
-                  Sign In
-                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                </span>
-              )}
+            <button type="submit" disabled={loading}
+              className="btn-brown w-full text-center disabled:opacity-50">
+              {loading ? "Signing in..." : "Sign In"}
             </button>
           </form>
 
           <div className="relative my-6">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-[#2A2A35]" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-[#1A1A23] px-4 text-[#52525B]">or</span>
-            </div>
+            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gold/10" /></div>
+            <div className="relative flex justify-center"><span className="bg-white px-4 text-xs text-brown-mid">or</span></div>
           </div>
 
-          <p className="text-center text-sm text-[#A1A1AA]">
+          <p className="text-center text-sm text-brown-mid">
             Don&apos;t have an account?{" "}
-            <Link href="/register" className="text-[#E8A94C] font-semibold hover:text-[#D48832] transition-colors hover:underline">
-              Create Account →
-            </Link>
+            <Link href="/register" className="text-gold font-semibold hover:underline">Create Account →</Link>
           </p>
         </div>
 
-        <p className="text-center mt-6">
-          <Link href="/" className="text-xs text-[#52525B] hover:text-[#A1A1AA] transition-colors">
-            ← Back to Home
-          </Link>
-        </p>
+        <p className="text-center mt-6"><Link href="/" className="text-xs text-brown-mid hover:text-gold transition-colors">← Back to Home</Link></p>
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-white-soft flex items-center justify-center"><div className="animate-spin h-8 w-8 border-2 border-gold border-t-transparent rounded-full" /></div>}>
+      <LoginForm />
+    </Suspense>
   )
 }

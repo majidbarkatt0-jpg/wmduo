@@ -679,7 +679,7 @@ async function main() {
   // Create admin user if not exists
   const existingAdmin = await prisma.user.findUnique({ where: { email: "admin@wmduo.com" } })
   if (!existingAdmin) {
-    const password = await bcrypt.hash("admin123", 12)
+    const password = await bcrypt.hash("Admin@123456", 12)
     await prisma.user.create({
       data: {
         name: "WM Duo Admin",
@@ -688,7 +688,7 @@ async function main() {
         role: "admin",
       },
     })
-    console.log("  ✓ Created admin user (admin@wmduo.com / admin123)")
+    console.log("  ✓ Created admin user (admin@wmduo.com / Admin@123456)")
   } else {
     console.log("  ✓ Admin user already exists")
   }

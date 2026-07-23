@@ -1,8 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { getAccessToken, getStoreUrl } from '@/lib/shopify';
 
-const SHOPIFY_STORE = process.env.SHOPIFY_STORE || '1iw1ss-rv.myshopify.com';
+const SHOPIFY_STORE = process.env.SHOPIFY_STORE;
+if (!SHOPIFY_STORE) {
+  console.warn('⚠️ SHOPIFY_STORE environment variable not configured');
+}
 const ACCESS_TOKEN = process.env.SHOPIFY_ACCESS_TOKEN || '';
+
+// Input validation schema
+const checkoutInputSchema = z.object({
+  variantId: z.string().min(1, "Variant ID is required"),
+  quantity: z.number().int().min(1, "Quantity must be at least 1").max(99, "Maximum 99 items"),
+  email: z.string().email("Valid email required").optional(),
+  firstName: z.string().max(100).optional(),
+  lastName: z.string().max(100).optional(),
+  address1: z.string().max(200).optional(),
+  city: z.string().max(100).optional(),
+  country: z.string().max(100).optional(),
+  zip: z.string().max(20).optional(),
+  phone: z.string().max(30).optional(),
+});
 
 // GraphQL mutation to create a checkout (draft order with payment link)
 const CREATE_CHECKOUT_MUTATION = `
@@ -25,18 +43,28 @@ const CREATE_CHECKOUT_MUTATION = `
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { variantId, quantity, email, firstName, lastName, address1, city, country, zip, phone } = body;
-
-    if (!variantId || !quantity) {
+    
+    // 🔒 Validate input with Zod schema
+    const validation = checkoutInputSchema.safeParse(body);
+    if (!validation.success) {
       return NextResponse.json(
-        { error: 'variantId and quantity are required' },
+        { error: validation.error.issues[0]?.message || "Invalid input" },
         { status: 400 }
+      );
+    }
+    
+    const { variantId, quantity, email, firstName, lastName, address1, city, country, zip, phone } = validation.data;
+
+    if (!SHOPIFY_STORE) {
+      return NextResponse.json(
+        { error: 'Shopify store not configured' },
+        { status: 500 }
       );
     }
 
     // Build the GraphQL input
     const input: any = {
-      lineItems: [{ variantId, quantity: quantity || 1 }],
+      lineItems: [{ variantId, quantity }],
     };
 
     // Add customer info if provided
@@ -69,11 +97,21 @@ export async function POST(request: NextRequest) {
       }
     );
 
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => 'Unknown error');
+      console.error(`Shopify API error (${response.status}):`, errorText.slice(0, 300));
+      return NextResponse.json(
+        { error: 'Checkout service temporarily unavailable' },
+        { status: 502 }
+      );
+    }
+
     const result = await response.json();
 
     if (result.errors) {
+      console.error('Shopify GraphQL errors:', result.errors);
       return NextResponse.json(
-        { error: result.errors[0]?.message || 'Shopify API error' },
+        { error: 'Failed to create checkout. Please try again.' },
         { status: 500 }
       );
     }
@@ -83,7 +121,7 @@ export async function POST(request: NextRequest) {
 
     if (userErrors?.length > 0) {
       return NextResponse.json(
-        { error: userErrors[0]?.message, fields: userErrors[0]?.field },
+        { error: userErrors[0]?.message || 'Checkout validation failed' },
         { status: 400 }
       );
     }
@@ -98,7 +136,7 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error('Checkout error:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to create checkout' },
+      { error: 'Failed to create checkout. Please try again.' },
       { status: 500 }
     );
   }

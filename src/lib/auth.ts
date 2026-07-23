@@ -4,6 +4,26 @@ import CredentialsProvider from "next-auth/providers/credentials"
 import bcrypt from "bcryptjs"
 import { prisma } from "./prisma"
 
+// 🔐 Rate limiter for login brute force protection
+const loginAttempts = new Map<string, { count: number; resetAt: number }>()
+
+function checkLoginRateLimit(ip: string): boolean {
+  const now = Date.now()
+  const entry = loginAttempts.get(ip)
+
+  if (!entry || entry.resetAt < now) {
+    loginAttempts.set(ip, { count: 1, resetAt: now + 60_000 })
+    return true
+  }
+
+  if (entry.count >= 5) {
+    return false
+  }
+
+  entry.count++
+  return true
+}
+
 // Extend the built-in types
 declare module "next-auth" {
   interface Session {
@@ -35,9 +55,23 @@ export const authOptions: NextAuthOptions = {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(credentials) {
+      async authorize(credentials, req) {
         if (!credentials?.email || !credentials?.password) {
           throw new Error("Email and password required")
+        }
+
+        // 🔒 Rate limit: 5 attempts per minute per IP
+        // Use x-real-ip (Vercel) or CF-Connecting-IP (Cloudflare) — these are set by proxies
+        // x-forwarded-for can be spoofed by clients, use with caution
+        const headers = typeof req === 'object' && req ? req.headers || {} : {}
+        const ip = 
+          headers['cf-connecting-ip']?.toString() ||
+          headers['x-real-ip']?.toString() ||
+          headers['x-forwarded-for']?.toString().split(',')[0]?.trim() ||
+          'unknown'
+        
+        if (!checkLoginRateLimit(ip)) {
+          throw new Error("Too many login attempts. Please try again in 60 seconds.")
         }
 
         const user = await prisma.user.findUnique({
@@ -87,7 +121,7 @@ export const authOptions: NextAuthOptions = {
   },
   // Dynamically set NEXTAUTH_URL so both local dev and Vercel work
   // Vercel sets VERCEL_URL automatically; local dev uses the env var or falls back
-  secret: process.env.NEXTAUTH_SECRET || "wmduo-super-secret-key-change-in-production",
+  secret: process.env.NEXTAUTH_SECRET,
   useSecureCookies: process.env.VERCEL === "1" || process.env.NODE_ENV === "production",
   cookies: {
     sessionToken: {

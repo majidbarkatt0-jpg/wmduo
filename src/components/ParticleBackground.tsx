@@ -118,6 +118,16 @@ export default function ParticleBackground() {
     resize()
     animate()
 
+    // Pause when page is hidden
+    const handleVisibility = () => {
+      if (document.hidden) {
+        cancelAnimationFrame(animationId)
+      } else {
+        animate()
+      }
+    }
+    document.addEventListener("visibilitychange", handleVisibility)
+
     const handleResize = () => resize()
     const handleMouse = (e: MouseEvent) => {
       mouseX = e.clientX

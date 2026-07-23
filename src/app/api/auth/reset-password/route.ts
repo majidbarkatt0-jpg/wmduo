@@ -1,23 +1,44 @@
 import { NextResponse } from "next/server"
 import bcrypt from "bcryptjs"
+import { z } from "zod"
 import { prisma } from "@/lib/prisma"
+import { checkRateLimit, getRateLimitKey } from "@/lib/rate-limit"
+
+const tokenAttempts = new Map<string, number>()
+
+export const dynamic = 'force-dynamic'
 
 export async function POST(request: Request) {
   try {
-    const { token, password } = await request.json()
-
-    if (!token || !password) {
-      return NextResponse.json({ error: "Token and password are required" }, { status: 400 })
+    const rlKey = `reset-pw:${getRateLimitKey(request)}`
+    const { allowed } = checkRateLimit(rlKey, { maxRequests: 10, windowMs: 60 * 1000 })
+    if (!allowed) {
+      return NextResponse.json({ error: "Too many attempts. Please try again later." }, { status: 429 })
     }
 
-    if (password.length < 6) {
+    const { token, password } = await request.json()
+
+    const resetSchema = z.object({
+      token: z.string().min(1, "Token is required"),
+      password: z.string().min(8, "Password must be at least 8 characters"),
+    })
+
+    const validation = resetSchema.safeParse({ token, password })
+    if (!validation.success) {
       return NextResponse.json(
-        { error: "Password must be at least 6 characters" },
+        { error: validation.error.issues[0]?.message || "Invalid input" },
         { status: 400 }
       )
     }
 
-    // Find valid token
+    // Per-token attempt tracking — invalidate after 5 failures
+    const tokenKey = `reset-token:${token}`
+    const attempts = tokenAttempts.get(tokenKey) || 0
+    if (attempts >= 5) {
+      return NextResponse.json({ error: "Too many attempts with this token. Request a new reset link." }, { status: 429 })
+    }
+    tokenAttempts.set(tokenKey, attempts + 1)
+
     const resetToken = await prisma.passwordResetToken.findUnique({
       where: { token },
     })
@@ -34,19 +55,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "This reset link has expired" }, { status: 400 })
     }
 
-    // Hash new password
     const hashedPassword = await bcrypt.hash(password, 12)
 
-    // Update user password
-    await prisma.user.update({
-      where: { email: resetToken.email },
-      data: { password: hashedPassword },
-    })
-
-    // Mark token as used
-    await prisma.passwordResetToken.update({
-      where: { id: resetToken.id },
-      data: { used: true },
+    await prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { email: resetToken.email },
+        data: { password: hashedPassword },
+      })
+      await tx.passwordResetToken.update({
+        where: { id: resetToken.id },
+        data: { used: true },
+      })
     })
 
     return NextResponse.json({ message: "Password reset successful. You can now log in." })

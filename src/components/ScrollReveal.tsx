@@ -45,14 +45,14 @@ export default function ScrollReveal({
         case "left": return "opacity-0 -translate-x-16"
         case "right": return "opacity-0 translate-x-16"
         case "scale": return "opacity-0 scale-75"
-        case "tilt": return "opacity-0 -translate-y-8 rotate-x-12"
+        case "tilt": return "opacity-0 -translate-y-8 [transform:rotateX(12deg)]"
         case "card": return "opacity-0"
         default: return "opacity-0 translate-y-12"
       }
     }
     switch (animation) {
-      case "tilt": return "opacity-100 translate-y-0 rotate-x-0 animate-tilt-in"
-      case "card": return "opacity-100 animate-card-enter"
+      case "tilt": return "opacity-100 translate-y-0 [transform:rotateX(0deg)]"
+      case "card": return "opacity-100"
       default: return "opacity-100 translate-x-0 translate-y-0 scale-100"
     }
   }

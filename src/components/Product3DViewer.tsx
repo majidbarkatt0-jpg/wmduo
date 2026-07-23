@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, useState, useEffect } from "react"
+import { useRef, useState, useEffect, useCallback } from "react"
 
 interface Product3DViewerProps {
   imageUrl: string
@@ -42,7 +42,7 @@ export default function Product3DViewer({
     return () => cancelAnimationFrame(autoRotateRef.current)
   }, [isAutoRotating, isHovered])
 
-  const handleMouseMove = (e: React.MouseEvent) => {
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
     if (!containerRef.current) return
     setIsAutoRotating(false)
     const rect = containerRef.current.getBoundingClientRect()
@@ -53,12 +53,12 @@ export default function Product3DViewer({
       x: (y - 0.5) * -15,
       y: (x - 0.5) * 20,
     })
-  }
+  }, [])
 
-  const handleMouseLeave = () => {
+  const handleMouseLeave = useCallback(() => {
     setIsAutoRotating(true)
     setRotation({ x: 0, y: 0 })
-  }
+  }, [])
 
   // Glow follows mouse
   const glowX = mousePos.x * 100

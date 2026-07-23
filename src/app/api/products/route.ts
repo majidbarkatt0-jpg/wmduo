@@ -3,6 +3,8 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const featured = searchParams.get("featured")
@@ -33,7 +35,16 @@ export async function GET(request: Request) {
       where,
       orderBy: { createdAt: "desc" },
     })
-    return NextResponse.json(products)
+
+    // Mask stock levels for non-admin requests to prevent competitive intel
+    const session = await getServerSession(authOptions)
+    const isAdmin = session && (session.user as any)?.role === "admin"
+    const sanitized = products.map(p => ({
+      ...p,
+      stock: isAdmin ? p.stock : (p.stock > 10 ? 10 : p.stock > 0 ? p.stock : 0),
+    }))
+
+    return NextResponse.json(sanitized)
   } catch (error) {
     return NextResponse.json({ error: "Failed to fetch products" }, { status: 500 })
   }

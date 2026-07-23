@@ -1,5 +1,9 @@
 import { NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import { getAllSupplierInfo } from '@/lib/fulfillment';
+
+export const dynamic = 'force-dynamic';
 
 /**
  * GET /api/suppliers
@@ -7,6 +11,11 @@ import { getAllSupplierInfo } from '@/lib/fulfillment';
  * Used by the admin dashboard to monitor costs and profits
  */
 export async function GET() {
+  const session = await getServerSession(authOptions);
+  if (!session || (session.user as any)?.role !== 'admin') {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const suppliers = getAllSupplierInfo();
   
   // Calculate totals

@@ -88,7 +88,7 @@ export default function AdminDashboard() {
           const Icon = card.icon
           return (
             <div
-              key={i}
+              key={`stat-${card.label}`}
               className={`relative bg-gradient-to-br ${card.gradient} bg-[#1A1A2E] rounded-2xl p-6 border border-white/5 hover:border-white/10 transition-all duration-300 group`}
             >
               <div className="flex items-start justify-between mb-4">

@@ -3,6 +3,8 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 
+export const dynamic = 'force-dynamic'
+
 export async function GET() {
   const session = await getServerSession(authOptions)
   if (!session || (session.user as any)?.role !== "admin") {
@@ -18,7 +20,6 @@ export async function GET() {
       totalMessages,
       recentOrders,
       ordersByStatus,
-      allOrders,
     ] = await Promise.all([
       prisma.order.count(),
       prisma.order.aggregate({ _sum: { total: true } }),
@@ -34,22 +35,9 @@ export async function GET() {
         by: ["status"],
         _count: true,
       }),
-      prisma.order.findMany({
-        select: { total: true, createdAt: true },
-        orderBy: { createdAt: "desc" },
-      }),
     ])
 
-    // Calculate monthly revenue in JS
-    const monthlyMap: Record<string, number> = {}
-    for (const o of allOrders) {
-      const month = new Date(o.createdAt).toISOString().slice(0, 7) // "YYYY-MM"
-      monthlyMap[month] = (monthlyMap[month] || 0) + o.total
-    }
-    const monthlyRevenue = Object.entries(monthlyMap)
-      .map(([month, revenue]) => ({ month, revenue }))
-      .sort((a, b) => b.month.localeCompare(a.month))
-      .slice(0, 6)
+    const monthlyRevenue: { month: string; revenue: number }[] = []
 
     return NextResponse.json({
       totalOrders,

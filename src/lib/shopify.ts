@@ -2,8 +2,8 @@
 import { NextResponse } from 'next/server';
 
 // Read from environment variables (set in .env and Vercel)
-const SHOPIFY_STORE = process.env.SHOPIFY_STORE || '1iw1ss-rv.myshopify.com';
-const CLIENT_ID = process.env.SHOPIFY_CLIENT_ID || '28aa1a0fd5cbeac5c82605a534d9d0df';
+const SHOPIFY_STORE = process.env.SHOPIFY_STORE || '';
+const CLIENT_ID = process.env.SHOPIFY_CLIENT_ID || '';
 const CLIENT_SECRET = process.env.SHOPIFY_CLIENT_SECRET || '';
 
 // Access token from user (can also be set via env var)
@@ -79,6 +79,10 @@ export async function shopifyFetch(query: string, variables?: any) {
     }
   );
 
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Shopify API error (${response.status}): ${errorText.slice(0, 200)}`);
+  }
   return response.json();
 }
 

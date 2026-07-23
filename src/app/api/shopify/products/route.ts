@@ -28,6 +28,7 @@ export async function GET() {
       })),
     });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('Shopify products fetch error:', error);
+    return NextResponse.json({ error: 'Failed to fetch Shopify products' }, { status: 500 });
   }
 }

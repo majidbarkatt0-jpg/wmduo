@@ -41,7 +41,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         const parsed = JSON.parse(saved)
         if (Array.isArray(parsed)) setItems(parsed)
       }
-    } catch {}
+    } catch (err) { console.warn("Cart localStorage parse error:", err) }
     setHydrated(true)
   }, [])
 

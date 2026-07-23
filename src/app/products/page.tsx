@@ -4,6 +4,8 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Search, SlidersHorizontal, X, Star, ShoppingBag, ChevronDown, Grid3X3, List, Check, ShoppingCart } from "lucide-react"
 import { useCart } from "@/context/CartContext"
+import Navbar from "@/components/Navbar"
+import Footer from "@/components/Footer"
 
 interface Product {
   id: string
@@ -41,25 +43,23 @@ export default function ProductsPage() {
     fetch("/api/categories")
       .then(r => r.json())
       .then(data => {
-        if (Array.isArray(data)) setCategories(data)
+        if (Array.isArray(data)) setCategories(data.map((c: any) => c.name))
       })
-      .catch(() => {})
+      .catch((err) => console.warn("API error:", err))
   }, [])
 
   useEffect(() => {
+    const ac = new AbortController()
     setLoading(true)
     const params = new URLSearchParams()
     if (category !== "All") params.set("category", category)
+    if (search) params.set("search", search)
     params.set("status", "active")
 
-    fetch(`/api/products?${params}`)
+    fetch(`/api/products?${params}`, { signal: ac.signal })
       .then(r => r.json())
       .then(data => {
         let filtered = Array.isArray(data) ? data : []
-        if (search) {
-          const q = search.toLowerCase()
-          filtered = filtered.filter(p => p.name.toLowerCase().includes(q) || p.description.toLowerCase().includes(q))
-        }
         switch (sort) {
           case "Price: Low to High": filtered.sort((a, b) => a.price - b.price); break
           case "Price: High to Low": filtered.sort((a, b) => b.price - a.price); break
@@ -71,33 +71,29 @@ export default function ProductsPage() {
       })
       .catch(() => setProducts([]))
       .finally(() => setLoading(false))
-  }, [category, sort])
+    return () => ac.abort()
+  }, [category, sort, search])
 
-  // Client-side search (more responsive)
-  const displayed = search
-    ? products.filter(p => {
-        const q = search.toLowerCase()
-        return p.name.toLowerCase().includes(q) || p.description.toLowerCase().includes(q) || (p.category || "").toLowerCase().includes(q)
-      })
-    : products
+  const displayed = products
 
   const handleAdd = (product: Product) => {
     setAddingId(product.id)
     addItem({
       productId: product.id,
       name: product.name,
-      price: product.compareAt || product.price,
+      price: product.price, // ✅ FIXED: was using compareAt (higher fake price)
       imageUrl: product.imageUrl || "",
       slug: product.slug,
       stock: product.stock,
-    })
+    }, 1)
     setTimeout(() => setAddingId(null), 800)
   }
 
   return (
-    <div className="min-h-screen bg-[#0D0D12]">
+    <div className="min-h-screen bg-white-soft">
+      <Navbar />
       {/* Header */}
-      <div className="bg-gradient-to-b from-[#1A1A23] to-[#0D0D12] border-b border-[#2A2A35] py-10 sm:py-14">
+      <div className="bg-white border-b border-gold/10 pt-24 pb-10 sm:pt-28 sm:pb-14">
         <div className="max-w-7xl mx-auto px-4 text-center">
           <span className="text-xs font-semibold text-[#E8A94C] uppercase tracking-[0.15em]">WM Duo Store</span>
           <h1 className="text-3xl sm:text-5xl font-bold text-white mt-3 mb-3 tracking-tight">
@@ -110,7 +106,7 @@ export default function ProductsPage() {
       </div>
 
       {/* Search + Filters Bar */}
-      <div className="sticky top-0 z-30 bg-[#0D0D12]/95 backdrop-blur-xl border-b border-[#2A2A35]">
+      <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-xl border-b border-gold/10">
         <div className="max-w-7xl mx-auto px-4 py-3">
           <div className="flex items-center gap-3">
             <div className="relative flex-1 max-w-md">
@@ -120,7 +116,7 @@ export default function ProductsPage() {
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 placeholder="Search products..."
-                className="w-full pl-10 pr-9 py-2.5 bg-[#1A1A23] border border-[#2A2A35] rounded-xl focus:border-[#E8A94C] focus:ring-4 focus:ring-[#E8A94C]/10 outline-none text-sm text-white placeholder-[#52525B] transition"
+                className="w-full pl-10 pr-9 py-2.5 bg-white-soft border border-gold/10 rounded-xl focus:border-gold outline-none text-sm text-brown-deep placeholder-brown-mid transition"
               />
               {search && (
                 <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#52525B] hover:text-white">
@@ -138,7 +134,7 @@ export default function ProductsPage() {
                   className={`px-3.5 py-2 rounded-xl text-xs font-medium whitespace-nowrap transition-all ${
                     category === cat
                       ? "bg-[#E8A94C]/10 text-[#E8A94C] border border-[#E8A94C]/30"
-                      : "text-[#A1A1AA] hover:text-white hover:bg-[#1A1A23] border border-transparent"
+                      : "text-brown-mid hover:text-brown-deep hover:bg-white border border-transparent"
                   }`}
                 >
                   {cat}
@@ -151,11 +147,11 @@ export default function ProductsPage() {
               <select
                 value={sort}
                 onChange={e => setSort(e.target.value)}
-                className="px-3 py-2.5 bg-[#1A1A23] border border-[#2A2A35] rounded-xl text-xs text-[#A1A1AA] outline-none focus:border-[#E8A94C] cursor-pointer"
+                className="px-3 py-2.5 bg-white-soft border border-gold/10 rounded-xl text-xs text-brown-mid outline-none focus:border-gold cursor-pointer"
               >
                 {SORT_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
-              <div className="flex bg-[#1A1A23] border border-[#2A2A35] rounded-xl overflow-hidden">
+              <div className="flex bg-white-soft border border-gold/10 rounded-xl overflow-hidden">
                 <button onClick={() => setView("grid")} className={`p-2.5 ${view === "grid" ? "bg-[#E8A94C]/10 text-[#E8A94C]" : "text-[#52525B] hover:text-white"}`}>
                   <Grid3X3 className="w-4 h-4" />
                 </button>
@@ -233,13 +229,13 @@ export default function ProductsPage() {
             {(search || category !== "All") && (
               <button
                 onClick={() => { setSearch(""); setCategory("All") }}
-                className="gradient-bg text-white px-6 py-2.5 rounded-xl text-sm font-semibold"
+                className="gradient-bg text-black px-6 py-2.5 rounded-xl text-sm font-semibold"
               >
-                Clear filters
-              </button>
-            )}
-          </div>
-        ) : view === "grid" ? (
+              Clear Filters
+                </button>
+              )}
+            </div>
+          ) : view === "grid" ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5">
             {displayed.map(product => (
               <ProductCard
@@ -263,12 +259,13 @@ export default function ProductsPage() {
           </div>
         )}
       </div>
+      <Footer />
     </div>
   )
 }
 
 function ProductCard({ product, onAddToCart, adding }: { product: Product; onAddToCart: () => void; adding: boolean }) {
-  const discount = product.compareAt ? Math.round((1 - product.price / product.compareAt) * 100) : 0
+  const discount = (product.compareAt && product.compareAt > product.price) ? Math.round((1 - product.price / product.compareAt) * 100) : 0
   return (
     <div className="group bg-[#1A1A23] rounded-2xl border border-[#2A2A35] overflow-hidden hover:border-[#E8A94C]/30 hover:shadow-xl hover:shadow-[#7C3AED]/5 transition-all duration-300 hover:-translate-y-0.5">
       <Link href={`/products/${product.slug}`} className="block">
@@ -299,8 +296,8 @@ function ProductCard({ product, onAddToCart, adding }: { product: Product; onAdd
           </span>
         </div>
         <div className="flex items-center gap-2 mb-3">
-          <span className="text-lg font-bold text-white">${product.price}</span>
-          {product.compareAt && <span className="text-xs text-[#52525B] line-through">${product.compareAt}</span>}
+          <span className="text-lg font-bold text-white">${product.price.toFixed(2)}</span>
+          {product.compareAt && <span className="text-xs text-[#52525B] line-through">${product.compareAt.toFixed(2)}</span>}
         </div>
         <button
           onClick={onAddToCart}
@@ -308,7 +305,7 @@ function ProductCard({ product, onAddToCart, adding }: { product: Product; onAdd
           className={`w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold transition-all disabled:opacity-30 ${
             adding
               ? "bg-[#34D399] text-black"
-              : "gradient-bg text-white hover:shadow-lg hover:shadow-[#7C3AED]/20"
+              : "gradient-bg text-black hover:shadow-lg hover:shadow-[#7C3AED]/20"
           }`}
         >
           {adding ? (
@@ -325,7 +322,7 @@ function ProductCard({ product, onAddToCart, adding }: { product: Product; onAdd
 }
 
 function ProductListItem({ product, onAddToCart, adding }: { product: Product; onAddToCart: () => void; adding: boolean }) {
-  const discount = product.compareAt ? Math.round((1 - product.price / product.compareAt) * 100) : 0
+  const discount = (product.compareAt && product.compareAt > product.price) ? Math.round((1 - product.price / product.compareAt) * 100) : 0
   return (
     <div className="group bg-[#1A1A23] rounded-2xl border border-[#2A2A35] overflow-hidden hover:border-[#E8A94C]/30 hover:shadow-lg transition-all duration-300">
       <div className="flex gap-4 sm:gap-6 p-4">
@@ -350,8 +347,8 @@ function ProductListItem({ product, onAddToCart, adding }: { product: Product; o
                 <p className="text-xs sm:text-sm text-[#A1A1AA] mt-1 line-clamp-2 leading-relaxed">{product.description}</p>
               </div>
               <div className="text-right flex-shrink-0 hidden sm:block">
-                <div className="text-xl font-bold text-white">${product.price}</div>
-                {product.compareAt && <div className="text-xs text-[#52525B] line-through">${product.compareAt}</div>}
+                <div className="text-xl font-bold text-white">${product.price.toFixed(2)}</div>
+                {product.compareAt && <div className="text-xs text-[#52525B] line-through">${product.compareAt.toFixed(2)}</div>}
                 {discount > 0 && <div className="text-xs text-[#34D399] font-medium mt-0.5">Save ${(product.compareAt! - product.price).toFixed(0)}</div>}
               </div>
             </div>
@@ -366,8 +363,8 @@ function ProductListItem({ product, onAddToCart, adding }: { product: Product; o
           </div>
           <div className="flex items-center justify-between mt-3 sm:mt-2">
             <div className="flex items-center gap-3 sm:hidden">
-              <span className="text-lg font-bold text-white">${product.price}</span>
-              {product.compareAt && <span className="text-xs text-[#52525B] line-through">${product.compareAt}</span>}
+                <span className="text-lg font-bold text-white">${product.price.toFixed(2)}</span>
+                {product.compareAt && <span className="text-xs text-[#52525B] line-through">${product.compareAt.toFixed(2)}</span>}
             </div>
             <button
               onClick={onAddToCart}
@@ -375,8 +372,8 @@ function ProductListItem({ product, onAddToCart, adding }: { product: Product; o
               className={`flex items-center justify-center gap-1.5 px-5 py-2 rounded-xl text-sm font-bold transition-all disabled:opacity-30 ${
                 adding
                   ? "bg-[#34D399] text-black"
-                  : "gradient-bg text-white hover:shadow-lg hover:shadow-[#7C3AED]/20"
-              }`}
+                  : "gradient-bg text-black hover:shadow-lg hover:shadow-[#7C3AED]/20"
+                }`}
             >
               {adding ? (
                 <><Check className="w-3.5 h-3.5" /> Added!</>

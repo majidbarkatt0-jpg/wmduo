@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import crypto from 'crypto';
+import { prisma } from '@/lib/prisma';
 
 /**
  * Shopify Order Webhook
@@ -12,67 +14,66 @@ import { NextRequest, NextResponse } from 'next/server';
  * 4. We record the order and trigger automated fulfillment
  */
 
+/**
+ * 🔒 Verify Shopify webhook HMAC signature to prevent fake order injections
+ */
+function verifyWebhook(body: string, hmacHeader: string | null): boolean {
+  if (!hmacHeader) return false;
+  const secret = process.env.SHOPIFY_CLIENT_SECRET || '';
+  if (!secret) {
+    console.error('❌ SHOPIFY_CLIENT_SECRET not configured — rejecting webhook');
+    return false;
+  }
+  const hash = crypto
+    .createHmac('sha256', secret)
+    .update(body, 'utf8')
+    .digest('base64');
+  return crypto.timingSafeEqual(Buffer.from(hash), Buffer.from(hmacHeader));
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    // 🔒 Verify HMAC signature
+    const rawBody = await request.clone().text();
+    const hmacHeader = request.headers.get('X-Shopify-Hmac-Sha256');
+    
+    if (!verifyWebhook(rawBody, hmacHeader)) {
+      console.error('❌ Invalid Shopify webhook HMAC signature — request rejected');
+      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+    }
+    
+    const body = JSON.parse(rawBody);
     const topic = request.headers.get('X-Shopify-Topic') || '';
     const shopDomain = request.headers.get('X-Shopify-Shop-Domain') || '';
     
-    console.log(`📦 Shopify Webhook: ${topic} from ${shopDomain}`);
-    
     if (topic === 'orders/create') {
-      const order = {
-        id: body.id,
-        orderNumber: body.order_number,
-        email: body.email,
-        totalPrice: body.total_price,
-        currency: body.currency,
-        createdAt: body.created_at,
-        customer: body.customer ? {
-          firstName: body.customer.first_name,
-          lastName: body.customer.last_name,
-          email: body.customer.email,
-        } : null,
-        shippingAddress: body.shipping_address ? {
-          address1: body.shipping_address.address1,
-          city: body.shipping_address.city,
-          province: body.shipping_address.province,
-          zip: body.shipping_address.zip,
-          country: body.shipping_address.country,
-        } : null,
-        lineItems: (body.line_items || []).map((item: any) => ({
-          title: item.title,
-          quantity: item.quantity,
-          price: item.price,
-          sku: item.sku,
-          variantId: item.variant_id,
-        })),
-      };
+      const shopifyOrderId = body.id?.toString();
       
-      console.log(`✅ Order #${order.orderNumber} received from ${order.email}`);
-      console.log(`   Total: $${order.totalPrice} ${order.currency}`);
-      console.log(`   Items: ${JSON.stringify(order.lineItems.map((i: any) => i.title))}`);
+      // Check idempotency — skip if already processed
+      const existing = shopifyOrderId ? await prisma.order.findFirst({
+        where: { orderNumber: { startsWith: `SHOP-${body.order_number}` } }
+      }) : null;
       
-      // AUTO-FULFILLMENT LOGIC:
-      // For each item, find the supplier and place the order
-      // Since we're using CJ Dropshipping / AliExpress, we would:
-      // 1. Look up the supplier for each SKU
-      // 2. Place the order with the supplier
-      // 3. Get tracking number
-      // 4. Update Shopify order with tracking
+      if (existing) {
+        return NextResponse.json({ success: true, message: 'Order already processed' });
+      }
       
-      // For now, we log the order and it can be fulfilled manually
-      // In production, this would auto-place orders with CJ Dropshipping API
+      const lineItems = (body.line_items || []).map((item: any) => ({
+        title: item.title,
+        quantity: item.quantity,
+        price: item.price,
+        sku: item.sku,
+        variantId: item.variant_id,
+      }));
       
       return NextResponse.json({ 
         success: true, 
-        message: `Order #${order.orderNumber} recorded`,
+        message: `Order #${body.order_number} recorded`,
         needsFulfillment: true,
       });
     }
     
     if (topic === 'orders/fulfilled') {
-      console.log(`📦 Order fulfilled: ${body.order_number}`);
       return NextResponse.json({ success: true });
     }
     

@@ -2,10 +2,6 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   allowedDevOrigins: ["192.168.18.68", "localhost"],
-  // Fix workspace root detection with multiple lockfiles
-  turbopack: {
-    root: "/home/majid/wmduo-next",
-  },
   // Security headers
   async headers() {
     return [
@@ -26,7 +22,7 @@ const nextConfig: NextConfig = {
               "object-src 'none'",
               "base-uri 'self'",
               "form-action 'self'",
-              // "upgrade-insecure-requests",  // Dev only — remove for production HTTPS
+              "upgrade-insecure-requests",
             ].join("; "),
           },
           {
